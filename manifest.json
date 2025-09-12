@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "Tapan Nayak",
+  "version": "1.0",
+  "description": "Helo students I Tapan Nayak and I will be helping you to answer my question . ",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "file://*/*",
+    "http://localhost:*/*",
+    "http://*/*",
+    "https://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "file://*/*",
+        "https://*/*",
+        "http://*/*"
+      ],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Smart Search Assistant"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

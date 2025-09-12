@@ -1,0 +1,216 @@
+/* PDF AI Assistant Styles */
+
+#pdf-ai-interface {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+#ai-toggle-btn {
+  background: #007bff;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  user-select: none;
+}
+
+#ai-toggle-btn:hover {
+  background: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+#ai-panel {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  width: 400px;
+  height: 500px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+#ai-panel.ai-panel-hidden {
+  display: none;
+}
+
+#ai-header {
+  background: #f8f9fa;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+#ai-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  font-weight: 600;
+}
+
+#close-ai {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+#close-ai:hover {
+  background: #e9ecef;
+  color: #333;
+}
+
+#response-area {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  background: #fafbfc;
+}
+
+#ai-response {
+  color: #555;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.response-message {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+  margin: 10px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.response-message strong {
+  color: #007bff;
+  display: block;
+  margin-bottom: 8px;
+}
+
+#input-area {
+  padding: 15px 20px;
+  border-top: 1px solid #eee;
+  background: white;
+  display: flex;
+  gap: 10px;
+}
+
+#search-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  background: white;
+  color: black;
+  transition: border-color 0.2s ease;
+}
+
+#search-input:focus {
+  border: 1px solid #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+#search-input::placeholder {
+  color: #999;
+}
+
+#send-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  min-width: 60px;
+}
+
+#send-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+#send-btn:active {
+  transform: translateY(0);
+}
+
+#loading {
+  padding: 10px 20px;
+  text-align: center;
+  color: #007bff;
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  #pdf-ai-interface {
+    right: 10px;
+    bottom: 10px;
+  }
+  
+  #ai-panel {
+    width: 320px;
+    height: 400px;
+  }
+}
+
+/* Animation for smooth appearance */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#ai-panel {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Scrollbar styling */
+#response-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+#response-area::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+#response-area::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+#response-area::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
