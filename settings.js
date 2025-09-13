@@ -6,9 +6,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const modelSelect = document.getElementById('modelSelect');
     const modelInfo = document.getElementById('modelInfo');
     const modelDescription = document.getElementById('modelDescription');
+    const aiRoleContent = document.getElementById('aiRoleContent');
+    const currentRoleDisplay = document.getElementById('currentRoleDisplay');
     const testButton = document.getElementById('testConnection');
     const refreshButton = document.getElementById('refreshModels');
     const saveButton = document.getElementById('saveSettings');
+    
+    // Default AI role content
+    const defaultAiRole = "You have to answer biology question. Be precise answer in less number of words if possible answer in one word if asked if asked like subjective then aswer in about 20 words. Options are given then choose correct option.";
     
     // Load saved settings
     loadSettings();
@@ -18,9 +23,10 @@ document.addEventListener('DOMContentLoaded', function() {
     refreshButton.addEventListener('click', refreshModels);
     saveButton.addEventListener('click', saveSettings);
     modelSelect.addEventListener('change', updateModelInfo);
+    aiRoleContent.addEventListener('input', updateCurrentRoleDisplay);
     
     function loadSettings() {
-        chrome.storage.sync.get(['apiUrl', 'selectedModel'], function(result) {
+        chrome.storage.sync.get(['apiUrl', 'selectedModel', 'aiRoleContent'], function(result) {
             if (result.apiUrl) {
                 urlInput.value = result.apiUrl;
             }
@@ -28,6 +34,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 modelSelect.value = result.selectedModel;
                 updateModelInfo();
             }
+            
+            // Load AI role content
+            const roleContent = result.aiRoleContent || defaultAiRole;
+            aiRoleContent.value = roleContent;
+            currentRoleDisplay.textContent = roleContent;
             
             // Auto-refresh models on load
             refreshModels();
@@ -37,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveSettings() {
         const url = urlInput.value.trim();
         const selectedModel = modelSelect.value;
+        const roleContent = aiRoleContent.value.trim() || defaultAiRole;
         
         if (!url) {
             showStatus('Please enter a valid server URL', 'disconnected');
@@ -50,9 +62,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         chrome.storage.sync.set({
             apiUrl: url,
-            selectedModel: selectedModel
+            selectedModel: selectedModel,
+            aiRoleContent: roleContent
         }, function() {
             showStatus('Settings saved successfully!', 'connected');
+            currentRoleDisplay.textContent = roleContent;
         });
     }
     
@@ -177,5 +191,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function showStatus(message, type) {
         statusElement.textContent = message;
         statusElement.className = `status ${type}`;
+    }
+    
+    function updateCurrentRoleDisplay() {
+        const roleContent = aiRoleContent.value.trim() || defaultAiRole;
+        currentRoleDisplay.textContent = roleContent;
     }
 });

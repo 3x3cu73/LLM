@@ -884,37 +884,41 @@ function displayAIResults(response) {
 // Query AI API
 async function queryLMStudio(query) {
   try {
-    // Get saved API URL and model from storage, with fallbacks
+    // Get saved API URL, model, and AI role from storage, with fallbacks
     const settings = await new Promise(resolve => {
       try {
         const chromeStorage = safeChromeStorage();
         if (chromeStorage && chromeStorage.sync) {
-          chromeStorage.sync.get(['apiUrl', 'selectedModel'], (result) => {
+          chromeStorage.sync.get(['apiUrl', 'selectedModel', 'aiRoleContent'], (result) => {
             if (chrome.runtime && chrome.runtime.lastError) {
               console.log('Chrome storage error, using defaults:', chrome.runtime.lastError);
               resolve({
                 apiUrl: 'http://localhost:1234',
-                selectedModel: 'openai/gpt-oss-20b'
+                selectedModel: 'openai/gpt-oss-20b',
+                aiRoleContent: 'You have to answer biology question. Be precise answer in less number of words if possible answer in one word if asked if asked like subjective then aswer in about 20 words. Options are given then choose correct option.'
               });
               return;
             }
             resolve({
               apiUrl: result.apiUrl || 'http://localhost:1234',
-              selectedModel: result.selectedModel || 'openai/gpt-oss-20b'
+              selectedModel: result.selectedModel || 'openai/gpt-oss-20b',
+              aiRoleContent: result.aiRoleContent || 'You have to answer biology question. Be precise answer in less number of words if possible answer in one word if asked if asked like subjective then aswer in about 20 words. Options are given then choose correct option.'
             });
           });
         } else {
           console.log('Chrome storage API not available, using defaults');
           resolve({
             apiUrl: 'http://localhost:1234',
-            selectedModel: 'openai/gpt-oss-20b'
+            selectedModel: 'openai/gpt-oss-20b',
+            aiRoleContent: 'You have to answer biology question. Be precise answer in less number of words if possible answer in one word if asked if asked like subjective then aswer in about 20 words. Options are given then choose correct option.'
           });
         }
       } catch (error) {
         console.log('Error accessing chrome storage, using defaults:', error);
         resolve({
           apiUrl: 'http://localhost:1234',
-          selectedModel: 'openai/gpt-oss-20b'
+          selectedModel: 'openai/gpt-oss-20b',
+          aiRoleContent: 'You have to answer biology question. Be precise answer in less number of words if possible answer in one word if asked if asked like subjective then aswer in about 20 words. Options are given then choose correct option.'
         });
       }
     });
@@ -924,7 +928,7 @@ async function queryLMStudio(query) {
       messages: [
         {
           role: "assistant",
-          content: "You have to answer biology question. Be precise answer in less number of words if possible answer in one word if asked if asked like subjective then aswer in about 20 words. Options are given then choose correct option."
+          content: settings.aiRoleContent
         },
         {
           role: "user",

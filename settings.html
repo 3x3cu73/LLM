@@ -63,7 +63,8 @@
         }
         
         .form-group input,
-        .form-group select {
+        .form-group select,
+        .form-group textarea {
             width: 100%;
             padding: 12px 16px;
             border: 2px solid #e1e5e9;
@@ -71,12 +72,19 @@
             font-size: 14px;
             box-sizing: border-box;
             transition: border-color 0.3s ease;
+            font-family: inherit;
         }
         
         .form-group input:focus,
-        .form-group select:focus {
+        .form-group select:focus,
+        .form-group textarea:focus {
             outline: none;
             border-color: #007bff;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
         }
         
         .form-group small {
@@ -181,6 +189,28 @@
             font-size: 12px;
             line-height: 1.4;
         }
+        
+        .ai-role-info {
+            background: #f0f8ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .ai-role-info h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .ai-role-info p {
+            margin: 0;
+            color: #555;
+            font-size: 13px;
+            line-height: 1.4;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -218,6 +248,21 @@
             <div id="modelInfo" class="model-info" style="display: none;">
                 <h4>Model Information</h4>
                 <p id="modelDescription">Model details will appear here when a model is selected.</p>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>AI Role Assistant</h2>
+            
+            <div class="form-group">
+                <label for="aiRoleContent">Assistant Role Instructions</label>
+                <textarea id="aiRoleContent" rows="4" placeholder="Enter the role instructions for the AI assistant"></textarea>
+                <small>Configure how the AI assistant should behave and respond to queries</small>
+            </div>
+            
+            <div class="ai-role-info">
+                <h4>Current Role</h4>
+                <p id="currentRoleDisplay">You have to answer biology question. Be precise answer in less number of words if possible answer in one word if asked if asked like subjective then aswer in about 20 words. Options are given then choose correct option.</p>
             </div>
         </div>
         
