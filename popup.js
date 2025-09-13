@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         try {
             // Test the models endpoint
-            console.log('Testing models endpoint:', `${url}/v1/models`);
+            console.log('PDF testing', `${url}/v1/models`);
             const response = await fetch(`${url}/v1/models`, {
                 method: 'GET',
                 headers: {
@@ -87,15 +87,15 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (response.ok) {
                 const data = await response.json();
-                console.log('Models data:', data);
+                console.log('PDF Data:', data);
                 if (data.data && data.data.length > 0) {
-                    showStatus(`✅ Connected! Found ${data.data.length} model(s)`, 'connected');
+                    showStatus(`PDF Reader Found`, 'connected');
                     updateAvailableModels(data.data);
                     
                     // Test chat completions with a simple message
                     await testChatCompletion(url, data.data[0].id);
                 } else {
-                    showStatus('✅ Connected! No models available', 'connected');
+                    showStatus('PDF reader Working', 'connected');
                 }
             } else {
                 const errorText = await response.text();

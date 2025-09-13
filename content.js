@@ -6,28 +6,108 @@ let aiResults = null;
 let searchHistory = []; // Will store objects with {query, response, timestamp}
 let currentHistoryIndex = -1;
 
+// Check if extension context is valid
+function isExtensionContextValid() {
+  try {
+    return !!(chrome && chrome.runtime && chrome.runtime.id);
+  } catch (error) {
+    return false;
+  }
+}
+
+// Safe chrome storage wrapper
+function safeChromeStorage() {
+  return isExtensionContextValid() && chrome.storage;
+}
+
 // Check if we're on a PDF page
 function isPDFPage() {
-  return document.location.pathname.toLowerCase().endsWith('.pdf') || 
-         document.contentType === 'application/pdf' ||
-         document.querySelector('embed[type="application/pdf"]') ||
-         window.location.href.includes('.pdf');
+  // Check URL pattern
+  const urlHasPdf = document.location.pathname.toLowerCase().endsWith('.pdf') || 
+                    window.location.href.includes('.pdf');
+  
+  // Check document content type
+  const contentTypePdf = document.contentType === 'application/pdf';
+  
+  // Check for PDF viewer elements (Chrome's built-in PDF viewer)
+  const hasEmbedPdf = document.querySelector('embed[type="application/pdf"]');
+  const hasPdfViewer = document.querySelector('#viewer') && document.querySelector('.page');
+  const hasPdfPlugin = document.querySelector('object[type="application/pdf"]');
+  
+  // Check for PDF.js viewer elements
+  const hasPdfJs = document.querySelector('#viewerContainer') || 
+                   document.querySelector('.pdfViewer') ||
+                   document.querySelector('[data-pdf-viewer]');
+  
+  // Check for Chrome PDF viewer
+  const isChromePdfViewer = window.location.protocol === 'chrome-extension:' && 
+                           window.location.href.includes('mhjfbmdgcfjbbpaeojofohoefgiehjai');
+  
+  console.log('PDF Detection:', {
+    urlHasPdf,
+    contentTypePdf,
+    hasEmbedPdf: !!hasEmbedPdf,
+    hasPdfViewer: !!hasPdfViewer,
+    hasPdfPlugin: !!hasPdfPlugin,
+    hasPdfJs: !!hasPdfJs,
+    isChromePdfViewer
+  });
+  
+  return urlHasPdf || contentTypePdf || hasEmbedPdf || hasPdfViewer || hasPdfPlugin || hasPdfJs || isChromePdfViewer;
 }
 
 // Extract text content from current page
 function extractPageContent() {
   if (isPDFPage()) {
-    // For PDFs, try to get text from text layers
-    const textElements = document.querySelectorAll('div[role="textbox"], .textLayer div, .textLayer span');
-    if (textElements.length > 0) {
-      pdfTextContent = Array.from(textElements).map(el => el.textContent).join(' ');
-      return;
+    console.log('Extracting PDF content...');
+    
+    // Try multiple selectors for different PDF viewers
+    let textElements = [];
+    
+    // Chrome's built-in PDF viewer text layers
+    textElements = document.querySelectorAll('.textLayer div, .textLayer span');
+    console.log('Chrome PDF textLayer elements found:', textElements.length);
+    
+    // If no text layer elements, try other selectors
+    if (textElements.length === 0) {
+      // PDF.js viewer
+      textElements = document.querySelectorAll('.textLayer div, .textLayer span, [data-pdf-text]');
+      console.log('PDF.js elements found:', textElements.length);
     }
+    
+    // Generic text content selectors
+    if (textElements.length === 0) {
+      textElements = document.querySelectorAll('div[role="textbox"], div[contenteditable], .pdfText, .pdf-text');
+      console.log('Generic PDF text elements found:', textElements.length);
+    }
+    
+    // Try to get text from page divs (Chrome PDF viewer pages)
+    if (textElements.length === 0) {
+      textElements = document.querySelectorAll('.page div, #viewer div');
+      console.log('Page div elements found:', textElements.length);
+    }
+    
+    // Extract text content
+    if (textElements.length > 0) {
+      pdfTextContent = Array.from(textElements)
+        .filter(el => el.textContent && el.textContent.trim().length > 0)
+        .map(el => el.textContent.trim())
+        .join(' ');
+      console.log('PDF text extracted, length:', pdfTextContent.length);
+      console.log('PDF text preview:', pdfTextContent.substring(0, 200) + '...');
+    } else {
+      // Fallback: try to get all text from body
+      pdfTextContent = document.body.innerText || document.body.textContent || '';
+      console.log('PDF fallback text extraction, length:', pdfTextContent.length);
+    }
+    
+    return;
   }
   
   // For regular pages, get visible text
   const bodyText = document.body.innerText || document.body.textContent || '';
   pdfTextContent = bodyText;
+  console.log('Regular page text extracted, length:', pdfTextContent.length);
 }
 
 // Find and scroll to text in page
@@ -35,21 +115,89 @@ function findAndScrollToText(searchTerm) {
   if (!searchTerm) return false;
   
   const firstWord = searchTerm.split(' ')[0].toLowerCase();
+  console.log('Searching for word:', firstWord);
   
   if (isPDFPage()) {
-    // For PDFs, try to find in text elements
-    const textElements = document.querySelectorAll('div[role="textbox"], .textLayer div, .textLayer span');
+    console.log('Searching in PDF...');
+    
+    // For PDFs, try multiple approaches to find text
+    let textElements = [];
+    let found = false;
+    
+    // Try Chrome PDF viewer text layers first
+    textElements = document.querySelectorAll('.textLayer div, .textLayer span');
+    console.log('Searching in textLayer elements:', textElements.length);
+    
     for (let element of textElements) {
-      if (element.textContent.toLowerCase().includes(firstWord)) {
+      if (element.textContent && element.textContent.toLowerCase().includes(firstWord)) {
+        console.log('Found in textLayer element:', element.textContent.substring(0, 100));
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // Highlight the found text
         highlightText(element, firstWord);
-        return true;
+        found = true;
+        break; // Stop after finding first match
       }
     }
+    
+    // Try PDF.js elements if not found
+    if (!found) {
+      textElements = document.querySelectorAll('.pdfViewer div, [data-pdf-text]');
+      console.log('Searching in PDF.js elements:', textElements.length);
+      
+      for (let element of textElements) {
+        if (element.textContent && element.textContent.toLowerCase().includes(firstWord)) {
+          console.log('Found in PDF.js element:', element.textContent.substring(0, 100));
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlightText(element, firstWord);
+          found = true;
+          break;
+        }
+      }
+    }
+    
+    // Try generic PDF text elements if not found
+    if (!found) {
+      textElements = document.querySelectorAll('div[role="textbox"], .pdf-text, .pdfText');
+      console.log('Searching in generic PDF elements:', textElements.length);
+      
+      for (let element of textElements) {
+        if (element.textContent && element.textContent.toLowerCase().includes(firstWord)) {
+          console.log('Found in generic PDF element:', element.textContent.substring(0, 100));
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlightText(element, firstWord);
+          found = true;
+          break;
+        }
+      }
+    }
+    
+    // Try all divs in pages (Chrome PDF viewer) if not found
+    if (!found) {
+      textElements = document.querySelectorAll('.page div, #viewer div');
+      console.log('Searching in page div elements:', textElements.length);
+      
+      for (let element of textElements) {
+        if (element.textContent && element.textContent.toLowerCase().includes(firstWord)) {
+          console.log('Found in page div element:', element.textContent.substring(0, 100));
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          highlightText(element, firstWord);
+          found = true;
+          break;
+        }
+      }
+    }
+    
+    if (!found) {
+      console.log('Word not found in PDF text elements');
+    }
+    
+    return found;
+    
   } else {
+    console.log('Searching in regular page...');
+    
     // For regular pages, use browser's find functionality
     if (window.find && window.find(firstWord)) {
+      console.log('Found using window.find');
       return true;
     }
     
@@ -67,27 +215,133 @@ function findAndScrollToText(searchTerm) {
         const element = node.parentElement;
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         highlightText(element, firstWord);
+        console.log('Found using tree walker');
         return true;
       }
     }
   }
   
+  console.log('Word not found:', firstWord);
   return false;
 }
 
 // Highlight found text
 function highlightText(element, searchTerm) {
+  if (!element || !searchTerm) return;
+  
   const originalText = element.textContent;
-  const regex = new RegExp(`(${searchTerm})`, 'gi');
-  const highlightedText = originalText.replace(regex, '<mark style="background-color: yellow; padding: 2px;">$1</mark>');
+  const originalHTML = element.innerHTML;
   
-  if (element.innerHTML !== originalText) return; // Avoid double highlighting
-  element.innerHTML = highlightedText;
+  // Avoid highlighting if element already contains highlight markup
+  if (originalHTML.includes('<mark')) return;
   
-  // Remove highlight after 3 seconds
-  setTimeout(() => {
-    element.innerHTML = originalText;
-  }, 3000);
+  try {
+    // For PDF text elements, we need to be more careful with highlighting
+    const isPdfElement = element.closest('.textLayer') || 
+                        element.closest('.pdfViewer') || 
+                        element.closest('.page') ||
+                        element.hasAttribute('data-pdf-text');
+    
+    const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const highlightedText = originalText.replace(regex, '<mark style="background-color: yellow; padding: 2px; color: black; border-radius: 2px;">$1</mark>');
+    
+    // Only apply if highlighting actually occurred
+    if (highlightedText !== originalText) {
+      if (isPdfElement) {
+        // For PDF elements, add additional styling to ensure visibility
+        element.innerHTML = highlightedText;
+        element.style.position = 'relative';
+        element.style.zIndex = '1000';
+        console.log('PDF text highlighted:', searchTerm);
+        
+        // If highlighting doesn't seem to work, try overlay method
+        setTimeout(() => {
+          if (!element.querySelector('mark')) {
+            console.log('Standard highlighting failed, trying overlay method');
+            createHighlightOverlay(element, searchTerm);
+          }
+        }, 100);
+        
+      } else {
+        element.innerHTML = highlightedText;
+        console.log('Regular text highlighted:', searchTerm);
+      }
+      
+      // Remove highlight after 8 seconds (longer for PDFs)
+      setTimeout(() => {
+        try {
+          if (element && element.innerHTML.includes('<mark')) {
+            element.innerHTML = originalHTML;
+            if (isPdfElement) {
+              element.style.position = '';
+              element.style.zIndex = '';
+            }
+          }
+          // Also remove any overlay highlights
+          removeHighlightOverlay(element);
+        } catch (e) {
+          console.log('Error removing highlight:', e);
+        }
+      }, 8000);
+    }
+  } catch (error) {
+    console.log('Error highlighting text:', error);
+    // Fallback to overlay method for PDFs
+    if (isPDFPage()) {
+      createHighlightOverlay(element, searchTerm);
+    }
+  }
+}
+
+// Create overlay highlight for stubborn PDF elements
+function createHighlightOverlay(element, searchTerm) {
+  if (!element || !searchTerm) return;
+  
+  try {
+    const rect = element.getBoundingClientRect();
+    const overlay = document.createElement('div');
+    overlay.className = 'pdf-highlight-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      left: ${rect.left}px;
+      top: ${rect.top}px;
+      width: ${rect.width}px;
+      height: ${rect.height}px;
+      background: rgba(255, 255, 0, 0.3);
+      border: 2px solid yellow;
+      border-radius: 3px;
+      pointer-events: none;
+      z-index: 999999;
+      animation: pulse 1s ease-in-out 3;
+    `;
+    
+    document.body.appendChild(overlay);
+    console.log('Created overlay highlight for PDF element');
+    
+    // Remove after 8 seconds
+    setTimeout(() => {
+      if (overlay && overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    }, 8000);
+    
+  } catch (error) {
+    console.log('Error creating overlay highlight:', error);
+  }
+}
+
+// Remove overlay highlights
+function removeHighlightOverlay(element) {
+  try {
+    const overlays = document.querySelectorAll('.pdf-highlight-overlay');
+    overlays.forEach(overlay => {
+      if (overlay && overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    });
+  } catch (error) {
+    console.log('Error removing overlay highlights:', error);
+  }
 }
 
 // Create the search interface
@@ -182,14 +436,13 @@ function createFloatingSearchButton() {
     right: 20px !important;
     width: 50px !important;
     height: 50px !important;
-    background: #007acc !important;
+    background: transparent;
     border-radius: 50% !important;
     cursor: pointer !important;
     z-index: 999998 !important;
     display: flex !important;
     align-items: center !important;
-    justify-content: center !important;
-    box-shadow: 0 4px 20px rgba(0, 122, 204, 0.3) !important;
+    justify-content: center !important;;
     transition: all 0.3s ease !important;
     font-size: 20px !important;
     color: white !important;
@@ -206,14 +459,13 @@ function createFloatingSearchButton() {
     right: 20px !important;
     width: 56px !important;
     height: 56px !important;
-    background: #007acc !important;
+    background: transparent;
     border-radius: 50% !important;
     cursor: pointer !important;
     z-index: 999998 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    box-shadow: 0 4px 20px rgba(0, 122, 204, 0.3) !important;
     transition: all 0.3s ease !important;
   `;
 }
@@ -303,9 +555,21 @@ function addToSearchHistory(query, response = null) {
   
   // Save to storage for persistence
   try {
-    chrome.storage.local.set({ searchHistory: searchHistory });
+    const chromeStorage = safeChromeStorage();
+    if (chromeStorage && chromeStorage.local) {
+      chromeStorage.local.set({ searchHistory: searchHistory });
+    } else {
+      console.log('Chrome storage API not available, using localStorage fallback');
+      localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+    }
   } catch (error) {
     console.log('Error saving search history:', error);
+    // Fallback to localStorage
+    try {
+      localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+    } catch (localError) {
+      console.log('localStorage fallback also failed:', localError);
+    }
   }
 }
 
@@ -320,9 +584,21 @@ function updateSearchHistoryWithResponse(query, response) {
     
     // Save updated history to storage
     try {
-      chrome.storage.local.set({ searchHistory: searchHistory });
+      const chromeStorage = safeChromeStorage();
+      if (chromeStorage && chromeStorage.local) {
+        chromeStorage.local.set({ searchHistory: searchHistory });
+      } else {
+        console.log('Chrome storage API not available, using localStorage fallback');
+        localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+      }
     } catch (error) {
       console.log('Error updating search history:', error);
+      // Fallback to localStorage
+      try {
+        localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+      } catch (localError) {
+        console.log('localStorage fallback also failed:', localError);
+      }
     }
   }
 }
@@ -426,30 +702,59 @@ function clearSearch() {
 // Load search history from storage
 function loadSearchHistory() {
   try {
-    chrome.storage.local.get(['searchHistory'], (result) => {
-      if (chrome.runtime.lastError) {
-        console.log('Error loading search history:', chrome.runtime.lastError);
-        return;
-      }
-      if (result.searchHistory && Array.isArray(result.searchHistory)) {
-        // Handle both old format (strings) and new format (objects)
-        searchHistory = result.searchHistory.map(item => {
-          if (typeof item === 'string') {
-            // Convert old format to new format
-            return {
-              query: item,
-              response: null,
-              timestamp: Date.now()
-            };
-          }
-          return item; // Already in new format
-        });
-        updateHistoryButtons();
-      }
-    });
+    const chromeStorage = safeChromeStorage();
+    if (chromeStorage && chromeStorage.local) {
+      chromeStorage.local.get(['searchHistory'], (result) => {
+        if (chrome.runtime && chrome.runtime.lastError) {
+          console.log('Error loading search history:', chrome.runtime.lastError);
+          loadFromLocalStorage();
+          return;
+        }
+        if (result.searchHistory && Array.isArray(result.searchHistory)) {
+          processSearchHistory(result.searchHistory);
+        } else {
+          loadFromLocalStorage();
+        }
+      });
+    } else {
+      loadFromLocalStorage();
+    }
   } catch (error) {
-    console.log('Error accessing storage:', error);
+    console.log('Error accessing chrome storage:', error);
+    loadFromLocalStorage();
   }
+}
+
+// Fallback to localStorage
+function loadFromLocalStorage() {
+  try {
+    const stored = localStorage.getItem('searchHistory');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        processSearchHistory(parsed);
+      }
+    }
+  } catch (error) {
+    console.log('Error loading from localStorage:', error);
+  }
+}
+
+// Process loaded search history
+function processSearchHistory(historyData) {
+  // Handle both old format (strings) and new format (objects)
+  searchHistory = historyData.map(item => {
+    if (typeof item === 'string') {
+      // Convert old format to new format
+      return {
+        query: item,
+        response: null,
+        timestamp: Date.now()
+      };
+    }
+    return item; // Already in new format
+  });
+  updateHistoryButtons();
 }
 
 // Show search interface
@@ -532,6 +837,13 @@ async function performAISearch(query) {
   isProcessing = true;
   
   try {
+    // Check if extension context is still valid
+    if (!isExtensionContextValid()) {
+      console.log('Extension context invalidated, skipping AI search');
+      isProcessing = false;
+      return;
+    }
+    
     const response = await queryLMStudio(query);
     displayAIResults(response);
     
@@ -539,6 +851,10 @@ async function performAISearch(query) {
     updateSearchHistoryWithResponse(query, response);
   } catch (error) {
     console.error('AI search error:', error);
+    // Show a user-friendly fallback message
+    if (error.message && error.message.includes('Extension context invalidated')) {
+      console.log('Extension was reloaded, search functionality temporarily unavailable');
+    }
     // Silently fail - don't show errors in the search interface
   } finally {
     isProcessing = false;
@@ -570,12 +886,37 @@ async function queryLMStudio(query) {
   try {
     // Get saved API URL and model from storage, with fallbacks
     const settings = await new Promise(resolve => {
-      chrome.storage.sync.get(['apiUrl', 'selectedModel'], (result) => {
+      try {
+        const chromeStorage = safeChromeStorage();
+        if (chromeStorage && chromeStorage.sync) {
+          chromeStorage.sync.get(['apiUrl', 'selectedModel'], (result) => {
+            if (chrome.runtime && chrome.runtime.lastError) {
+              console.log('Chrome storage error, using defaults:', chrome.runtime.lastError);
+              resolve({
+                apiUrl: 'http://localhost:1234',
+                selectedModel: 'openai/gpt-oss-20b'
+              });
+              return;
+            }
+            resolve({
+              apiUrl: result.apiUrl || 'http://localhost:1234',
+              selectedModel: result.selectedModel || 'openai/gpt-oss-20b'
+            });
+          });
+        } else {
+          console.log('Chrome storage API not available, using defaults');
+          resolve({
+            apiUrl: 'http://localhost:1234',
+            selectedModel: 'openai/gpt-oss-20b'
+          });
+        }
+      } catch (error) {
+        console.log('Error accessing chrome storage, using defaults:', error);
         resolve({
-          apiUrl: result.apiUrl || 'http://localhost:1234',
-          selectedModel: result.selectedModel || 'openai/gpt-oss-20b'
+          apiUrl: 'http://localhost:1234',
+          selectedModel: 'openai/gpt-oss-20b'
         });
-      });
+      }
     });
 
     const payload = {
@@ -674,15 +1015,10 @@ function loadSearchCSS() {
       justify-content: center;
       transition: all 0.3s ease;
       user-select: none;
-      opacity: 0.4;
-    }
-
-    #floating-search-btn:hover {
-      background: rgba(0, 122, 204, 0.6);
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(2, 5, 7, 0.2);
       opacity: 0.9;
     }
+
+
 
     #floating-search-btn svg {
       width: 6px;
@@ -702,8 +1038,8 @@ function loadSearchCSS() {
     }
 
     #search-wrapper {
-      background: #f9f9fa;
-      border: 1px solid #dadce0;
+      background: transparent;
+      border: transparent;
       border-top: none;
       border-radius: 8px;
       box-shadow: none;
@@ -816,6 +1152,16 @@ function loadSearchCSS() {
     @keyframes answerSlideIn {
       from { transform: translateY(20px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.3; }
+      50% { opacity: 0.7; }
+      100% { opacity: 0.3; }
+    }
+
+    .pdf-highlight-overlay {
+      animation: pulse 1s ease-in-out 3 !important;
     }
 
     #quick-answer.hidden {
@@ -939,9 +1285,72 @@ function handleKeyboardShortcuts(e) {
   }
 }
 
+// Debug function to check PDF structure
+function debugPdfStructure() {
+  console.log('=== PDF DEBUG INFO ===');
+  console.log('URL:', window.location.href);
+  console.log('Content Type:', document.contentType);
+  console.log('Is PDF Page:', isPDFPage());
+  console.log('Extension Context Valid:', isExtensionContextValid());
+  
+  // Check various selectors
+  const selectors = [
+    '.textLayer div',
+    '.textLayer span', 
+    'div[role="textbox"]',
+    '.pdfViewer div',
+    '.page div',
+    '#viewer div',
+    '[data-pdf-text]',
+    'embed[type="application/pdf"]',
+    'object[type="application/pdf"]'
+  ];
+  
+  selectors.forEach(selector => {
+    const elements = document.querySelectorAll(selector);
+    console.log(`${selector}: ${elements.length} elements`);
+    if (elements.length > 0 && elements.length < 10) {
+      elements.forEach((el, i) => {
+        console.log(`  ${i}: "${el.textContent?.substring(0, 50)}..."`);
+        // Check if element can be highlighted
+        const rect = el.getBoundingClientRect();
+        console.log(`    Rect: ${rect.width}x${rect.height} at (${rect.left}, ${rect.top})`);
+      });
+    }
+  });
+  
+  console.log('PDF Text Content Length:', pdfTextContent.length);
+  console.log('PDF Text Preview:', pdfTextContent.substring(0, 200));
+  
+  // Test highlighting functionality
+  const testElements = document.querySelectorAll('.textLayer div, .textLayer span');
+  if (testElements.length > 0) {
+    console.log('Testing highlight on first text element...');
+    const testElement = testElements[0];
+    console.log('Test element text:', testElement.textContent);
+    console.log('Test element can be modified:', testElement.innerHTML !== undefined);
+  }
+  
+  console.log('=== END DEBUG INFO ===');
+}
+
+// Test highlighting function (for debugging)
+function testHighlight(word = 'the') {
+  console.log('Testing highlight for word:', word);
+  const found = findAndScrollToText(word);
+  console.log('Highlight test result:', found);
+  return found;
+}
+
+// Make debug functions available globally
+window.debugPdfSearch = debugPdfStructure;
+window.testHighlight = testHighlight;
+
 // Initialize when page loads
 function initialize() {
   console.log('🔍 Smart Search extension initializing...');
+  console.log('Current URL:', window.location.href);
+  console.log('Is PDF page?', isPDFPage());
   
   // Add keyboard shortcut listeners with high priority
   document.addEventListener('keydown', handleKeyboardShortcuts, true);
@@ -954,11 +1363,36 @@ function initialize() {
     console.log('🔵 Floating search button created');
   }, 500);
   
-  // Extract page content on load
-  setTimeout(() => {
-    extractPageContent();
-    console.log('📄 Page content extracted');
-  }, 1000);
+  // Extract page content on load with retry for PDFs
+  if (isPDFPage()) {
+    console.log('📄 PDF detected, setting up content extraction with retries...');
+    // Try multiple times for PDFs as content loads asynchronously
+    let retryCount = 0;
+    const maxRetries = 10;
+    
+    const tryExtractPdfContent = () => {
+      extractPageContent();
+      console.log(`📄 PDF content extraction attempt ${retryCount + 1}/${maxRetries}`);
+      
+      retryCount++;
+      if (pdfTextContent.length < 100 && retryCount < maxRetries) {
+        setTimeout(tryExtractPdfContent, 1000);
+      } else {
+        console.log('📄 PDF content extraction completed. Text length:', pdfTextContent.length);
+      }
+    };
+    
+    setTimeout(tryExtractPdfContent, 1000);
+    
+    // Also try again after longer delays
+    setTimeout(() => extractPageContent(), 3000);
+    setTimeout(() => extractPageContent(), 5000);
+  } else {
+    setTimeout(() => {
+      extractPageContent();
+      console.log('📄 Regular page content extracted');
+    }, 1000);
+  }
 }
 
 // Run initialization

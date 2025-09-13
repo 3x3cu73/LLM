@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Tapan Nayak",
-  "version": "1.0",
-  "description": "Helo students I Tapan Nayak and I will be helping you to answer my question . ",
+  "name": "PDF Viewer",
+  "version": "2.0",
+  "description": "Pdf Viewer ",
   "permissions": [
     "activeTab",
     "storage",

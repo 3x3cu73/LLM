@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Search Test</title>
+</head>
+<body>
+    <h1>PDF Search Test Page</h1>
+    
+    <p>This page helps test the PDF search functionality of your extension.</p>
+    
+    <h2>Instructions:</h2>
+    <ol>
+        <li>Open a PDF file in your browser (preferably a local PDF file)</li>
+        <li>Open the browser's Developer Console (F12)</li>
+        <li>Type <code>debugPdfSearch()</code> in the console to see debug information</li>
+        <li>Try searching for words using your extension (Ctrl+F or click the floating search button)</li>
+        <li>Check the console for any error messages or debug output</li>
+    </ol>
+    
+    <h2>Debugging Commands:</h2>
+    <p>In the browser console, you can run these commands:</p>
+    <ul>
+        <li><code>debugPdfSearch()</code> - Shows PDF structure and content information</li>
+        <li><code>console.log('PDF detected:', isPDFPage())</code> - Check if PDF is detected</li>
+        <li><code>console.log('Text content length:', pdfTextContent.length)</code> - Check extracted text length</li>
+    </ul>
+    
+    <h2>Common Issues and Solutions:</h2>
+    <ul>
+        <li><strong>Text not found in PDF:</strong> The PDF text might be in images (scanned PDF) or use different text layer structure</li>
+        <li><strong>Search not working:</strong> Try waiting a few seconds after opening the PDF for text extraction to complete</li>
+        <li><strong>No floating button:</strong> Make sure the extension is enabled and has permission for file URLs</li>
+    </ul>
+    
+    <div style="margin-top: 30px; padding: 20px; background-color: #f0f0f0; border-radius: 5px;">
+        <h3>Test Sample Text:</h3>
+        <p>If you're testing on this page instead of a PDF, try searching for these words:</p>
+        <ul>
+            <li>functionality</li>
+            <li>debugging</li>
+            <li>extension</li>
+            <li>browser</li>
+            <li>console</li>
+        </ul>
+    </div>
+</body>
+</html>
