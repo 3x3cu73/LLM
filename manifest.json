@@ -33,6 +33,22 @@
     "default_popup": "popup.html",
     "default_title": "PDF Search"
   },
+  "commands": {
+    "open-ai-search": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Open PDF Search"
+    },
+    "quick-ai-search": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Alt+S"
+      },
+      "description": "Quick PDF Search"
+    }
+  },
   "options_page": "settings.html",
   "icons": {
     "16": "icon16.png",

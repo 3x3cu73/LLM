@@ -360,7 +360,7 @@ function createSearchInterface() {
     searchInterface.style.display = 'none';
     searchInterface.innerHTML = `
         <div id="search-field">
-          <input type="text" id="search-input" placeholder="Search PDF" autocomplete="off" spellcheck="false">
+          <input type="text" id="search-input" placeholder="PDF Search" autocomplete="off" spellcheck="false">
           <button id="history-up" aria-label="Previous search" title="Previous search">↑</button>
           <button id="history-down" aria-label="Next search" title="Next search">↓</button>
           <button id="close-search" aria-label="Close" title="Close search">✕</button>
@@ -405,69 +405,6 @@ function createSearchInterface() {
   } catch (error) {
     console.error('Error creating search interface:', error);
   }
-}
-
-// Create floating search button
-function createFloatingSearchButton() {
-  console.log('🔵 Creating floating search button...');
-  
-  // Check if button already exists
-  if (document.getElementById('floating-search-btn')) {
-    console.log('❌ Button already exists, skipping creation');
-    return;
-  }
-
-  const floatingBtn = document.createElement('div');
-  floatingBtn.id = 'floating-search-btn';
-  floatingBtn.title = 'Search PDF';
-
-  floatingBtn.addEventListener('click', (e) => {
-    console.log('🔵 Floating button clicked!', e);
-    e.preventDefault();
-    e.stopPropagation();
-    showSearchInterface();
-  });
-
-  // Add a search icon to make it visible
-  floatingBtn.innerHTML = '🔍';
-  floatingBtn.style.cssText = `
-    position: fixed !important;
-    bottom: 20px !important;
-    right: 20px !important;
-    width: 50px !important;
-    height: 50px !important;
-    background: transparent;
-    border-radius: 50% !important;
-    cursor: pointer !important;
-    z-index: 999998 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;;
-    transition: all 0.3s ease !important;
-    font-size: 20px !important;
-    color: white !important;
-  `;
-
-  document.body.appendChild(floatingBtn);
-  console.log('✅ Floating search button added to page');
-  console.log('✅ Floating search button added to page');
-  
-  // Add inline styles as fallback
-  floatingBtn.style.cssText = `
-    position: fixed !important;
-    bottom: 20px !important;
-    right: 20px !important;
-    width: 56px !important;
-    height: 56px !important;
-    background: transparent;
-    border-radius: 50% !important;
-    cursor: pointer !important;
-    z-index: 999998 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    transition: all 0.3s ease !important;
-  `;
 }
 
 // Handle search input changes
@@ -830,7 +767,7 @@ function hideQuickAnswer() {
   answerDiv.classList.add('hidden');
 }
 
-// Perform AI search in background
+// Perform PDF Search in background
 async function performAISearch(query) {
   if (isProcessing) return;
   
@@ -839,7 +776,7 @@ async function performAISearch(query) {
   try {
     // Check if extension context is still valid
     if (!isExtensionContextValid()) {
-      console.log('Extension context invalidated, skipping AI search');
+      console.log('Extension context invalidated, skipping PDF Search');
       isProcessing = false;
       return;
     }
@@ -850,7 +787,7 @@ async function performAISearch(query) {
     // Update search history with the response
     updateSearchHistoryWithResponse(query, response);
   } catch (error) {
-    console.error('AI search error:', error);
+    console.error('PDF Search error:', error);
     // Show a user-friendly fallback message
     if (error.message && error.message.includes('Extension context invalidated')) {
       console.log('Extension was reloaded, search functionality temporarily unavailable');
@@ -1004,32 +941,6 @@ function loadSearchCSS() {
   const style = document.createElement('style');
   style.id = 'smart-search-styles';
   style.textContent = `
-    /* Floating Search Button */
-    #floating-search-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      cursor: pointer;
-      z-index: 999998;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.3s ease;
-      user-select: none;
-      opacity: 0.9;
-    }
-
-
-
-    #floating-search-btn svg {
-      width: 6px;
-      height: 6px;
-      opacity: 0.9;
-    }
-
     /* Google Chrome Find Bar */
     #genuine-search-bar {
       position: fixed;
@@ -1172,12 +1083,6 @@ function loadSearchCSS() {
       display: none !important;
     }
 
-    /* Hide floating button when search is open */
-    #genuine-search-bar:not([style*="display: none"]) ~ #floating-search-btn {
-      opacity: 0;
-      pointer-events: none;
-    }
-
     /* Ensure quick answer stays at bottom left */
     #quick-answer {
       position: fixed !important;
@@ -1204,18 +1109,6 @@ function loadSearchCSS() {
         width: 14px;
         height: 14px;
         font-size: 10px;
-      }
-
-      #floating-search-btn {
-        bottom: 15px;
-        right: 15px;
-        width: 28px;
-        height: 28px;
-      }
-
-      #floating-search-btn svg {
-        width: 14px;
-        height: 14px;
       }
 
       #quick-answer {
@@ -1245,49 +1138,13 @@ function loadSearchCSS() {
         font-size: 9px;
       }
     }
-
-    /* Hide floating button on very small screens */
-    @media (max-height: 500px) {
-      #floating-search-btn {
-        display: none;
-      }
-    }
   `;
   document.head.appendChild(style);
 }
 
-// Keyboard shortcut handler
-function handleKeyboardShortcuts(e) {
-  console.log('Key pressed:', e.key, 'Ctrl:', e.ctrlKey, 'Meta:', e.metaKey);
-  
-  // Ctrl+F or Cmd+F to open search (like genuine browser search)
-  if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-    console.log('Ctrl+F detected, opening search interface');
-    e.preventDefault();
-    e.stopPropagation();
-    showSearchInterface();
-    return false;
-  }
-  
-  // Ctrl+L or Cmd+L to open search (address bar style)
-  if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
-    console.log('Ctrl+L detected, opening search interface');
-    e.preventDefault();
-    showSearchInterface();
-  }
-  
-  // Alternative shortcut: Ctrl+Shift+F (less likely to conflict)
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
-    console.log('Ctrl+Shift+F detected, opening search interface');
-    e.preventDefault();
-    showSearchInterface();
-  }
-  
-  // Escape to close search
-  if (e.key === 'Escape' && searchInterface && searchInterface.style.display !== 'none') {
-    hideSearchInterface();
-  }
-}
+// Make debug functions available globally
+window.debugPdfSearch = debugPdfStructure;
+window.testHighlight = testHighlight;
 
 // Debug function to check PDF structure
 function debugPdfStructure() {
@@ -1346,26 +1203,19 @@ function testHighlight(word = 'the') {
   return found;
 }
 
-// Make debug functions available globally
-window.debugPdfSearch = debugPdfStructure;
-window.testHighlight = testHighlight;
-
 // Initialize when page loads
 function initialize() {
   console.log('🔍 Smart Search extension initializing...');
   console.log('Current URL:', window.location.href);
   console.log('Is PDF page?', isPDFPage());
+  console.log('💡 PDF Search shortcuts: Use Chrome extension shortcuts (configure in chrome://extensions/shortcuts)');
   
-  // Add keyboard shortcut listeners with high priority
-  document.addEventListener('keydown', handleKeyboardShortcuts, true);
-  window.addEventListener('keydown', handleKeyboardShortcuts, true);
-  console.log('⌨️ Keyboard event listeners added');
-  
-  // Create the floating search button
-  setTimeout(() => {
-    createFloatingSearchButton();
-    console.log('🔵 Floating search button created');
-  }, 500);
+  // Add escape key listener for closing search interface
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && searchInterface && searchInterface.style.display !== 'none') {
+      hideSearchInterface();
+    }
+  });
   
   // Extract page content on load with retry for PDFs
   if (isPDFPage()) {
@@ -1419,7 +1269,7 @@ new MutationObserver(() => {
   }
 }).observe(document, { subtree: true, childList: true });
 
-// Listen for messages from popup
+// Listen for messages from popup and background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'searchPDF') {
     handlePDFSearch(request.query, request.settings).then(result => {
@@ -1428,6 +1278,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Will respond asynchronously
   } else if (request.action === 'highlightResult') {
     highlightSearchResult(request.index);
+    sendResponse({success: true});
+  } else if (request.action === 'openAISearch') {
+    // Handle keyboard shortcut command from background script
+    console.log('Opening PDF Search via keyboard shortcut:', request.command);
+    showSearchInterface();
     sendResponse({success: true});
   }
 });

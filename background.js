@@ -5,6 +5,24 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('Document Search Extension installed');
 });
 
+// Listen for keyboard commands
+chrome.commands.onCommand.addListener((command) => {
+  console.log('Command received:', command);
+  
+  // Get the active tab
+  chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+    if (tabs[0]) {
+      // Send message to content script to open search
+      chrome.tabs.sendMessage(tabs[0].id, {
+        action: 'openAISearch',
+        command: command
+      }).catch((error) => {
+        console.log('Could not send message to content script:', error);
+      });
+    }
+  });
+});
+
 // Handle messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'extractPDFText') {
