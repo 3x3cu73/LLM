@@ -1,8 +1,8 @@
-// Background script for PDF AI Assistant
+// Background script for Document Search Extension
 
 // Listen for extension installation
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('PDF AI Assistant installed');
+  console.log('Document Search Extension installed');
 });
 
 // Handle messages from content script

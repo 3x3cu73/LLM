@@ -27,6 +27,58 @@
             margin: 0;
         }
         
+        .search-section {
+            margin-bottom: 20px;
+        }
+        
+        .search-section label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .search-section input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        .search-section input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        
+        .search-results {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .search-results h3 {
+            font-size: 14px;
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        
+        .result-item {
+            padding: 8px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #007bff;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .result-item:hover {
+            background: #e9ecef;
+        }
+        
         .status {
             padding: 15px;
             border-radius: 8px;
@@ -47,49 +99,13 @@
             border: 1px solid #f5c6cb;
         }
         
-        .config {
-            margin-bottom: 20px;
-        }
-        
-        .config label {
-            display: block;
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .config input {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        
-        .config select {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            box-sizing: border-box;
-            background: white;
-        }
-        
-        .config input:focus,
-        .config select:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-        
         .actions {
-            display: flex;
-            gap: 10px;
+            display: block;
+            margin-bottom: 15px;
         }
         
         .btn {
-            flex: 1;
+            width: 100%;
             padding: 10px;
             border: none;
             border-radius: 4px;
@@ -116,54 +132,57 @@
             background: #545b62;
         }
         
-        .help {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid #eee;
+        .hidden-btn {
+            position: absolute;
+            bottom: 3px;
+            right: 3px;
+            width: 12px;
+            height: 12px;
+            border: none;
+            background: transparent;
+            color: #eee;
+            font-size: 7px;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            opacity: 0.2;
+            z-index: 1000;
         }
         
-        .help h3 {
-            font-size: 14px;
-            margin: 0 0 10px 0;
-            color: #333;
+        .hidden-btn:hover {
+            opacity: 0.5;
+            background: #f8f9fa;
+            color: #999;
         }
         
-        .help ul {
-            margin: 0;
-            padding-left: 20px;
-            font-size: 12px;
-            color: #666;
-        }
-        
-        .help li {
-            margin-bottom: 5px;
+        body {
+            position: relative;
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>PDF Searching</h1>
+        <h1>PDF Search</h1>
+        <p>Quick document search and navigation</p>
     </div>
     
     <div id="status" class="status disconnected">
-        Loading  PDF...
+        Ready to search
     </div>
     
-    <div class="config">
-        <label for="apiUrl">Search PDF File</label>
-        <input type="text" id="apiUrl" value="http://localhost:1234" placeholder="http://localhost:1234">
-    </div>
-    
-    <div class="config">
-        <label for="modelSelect">PDF Readers:</label>
-        <select id="modelSelect" class="model-select">
-            <option value="">Loading PDF...</option>
-        </select>
+    <div class="search-section">
+        <label for="searchQuery">Search in document:</label>
+        <input type="text" id="searchQuery" placeholder="Enter search terms..." autofocus>
     </div>
     
     <div class="actions">
-        <button id="testConnection" class="btn btn-primary">Try PDF</button>
-        <button id="saveSettings" class="btn btn-secondary">Save PDF</button>
+        <button id="searchButton" class="btn btn-primary">Search</button>
+        <button id="hiddenZero" class="hidden-btn">0</button>
+    </div>
+    
+    <div id="searchResults" class="search-results" style="display: none;">
+        <h3>Search Results</h3>
+        <div id="resultsList"></div>
     </div>
     
     

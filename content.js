@@ -1414,3 +1414,82 @@ new MutationObserver(() => {
     }, 1000);
   }
 }).observe(document, { subtree: true, childList: true });
+
+// Listen for messages from popup
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'searchPDF') {
+    handlePDFSearch(request.query, request.settings).then(result => {
+      sendResponse(result);
+    });
+    return true; // Will respond asynchronously
+  } else if (request.action === 'highlightResult') {
+    highlightSearchResult(request.index);
+    sendResponse({success: true});
+  }
+});
+
+// Handle PDF search
+async function handlePDFSearch(query, settings) {
+  try {
+    if (!isPDFPage()) {
+      return {success: false, error: 'Not a PDF page'};
+    }
+    
+    if (!pdfTextContent) {
+      // Try to extract content if not already available
+      await extractPageContent();
+      if (!pdfTextContent) {
+        return {success: false, error: 'Could not extract PDF content'};
+      }
+    }
+    
+    // Perform simple text search
+    const results = performTextSearch(query, pdfTextContent);
+    
+    // Store results for highlighting
+    window.currentSearchResults = results;
+    
+    return {
+      success: true,
+      results: results
+    };
+    
+  } catch (error) {
+    console.error('PDF search failed:', error);
+    return {success: false, error: error.message};
+  }
+}
+
+// Simple text search function
+function performTextSearch(query, text) {
+  const results = [];
+  const searchRegex = new RegExp(query, 'gi');
+  let match;
+  
+  while ((match = searchRegex.exec(text)) !== null) {
+    const start = Math.max(0, match.index - 100);
+    const end = Math.min(text.length, match.index + query.length + 100);
+    const context = text.substring(start, end);
+    
+    results.push({
+      text: context,
+      index: match.index,
+      position: results.length
+    });
+    
+    // Limit results to prevent overwhelming the UI
+    if (results.length >= 20) break;
+  }
+  
+  return results;
+}
+
+// Highlight search result (basic implementation)
+function highlightSearchResult(index) {
+  // This is a basic implementation - in a real PDF viewer, 
+  // you'd want to scroll to and highlight the specific text
+  if (window.currentSearchResults && window.currentSearchResults[index]) {
+    console.log('Highlighting result:', window.currentSearchResults[index]);
+    // You could implement actual highlighting here based on the PDF viewer type
+  }
+}

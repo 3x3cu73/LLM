@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PDF Viewer",
+  "name": "Document Search",
   "version": "2.0",
-  "description": "Pdf Viewer ",
+  "description": "Advanced document search and navigation tool",
   "permissions": [
     "activeTab",
     "storage",
@@ -31,8 +31,9 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Smart Search Assistant"
+    "default_title": "PDF Search"
   },
+  "options_page": "settings.html",
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",

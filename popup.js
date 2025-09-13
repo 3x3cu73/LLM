@@ -1,174 +1,162 @@
-// Popup script for PDF AI Assistant
+// Popup script for PDF Search Extension
 
 document.addEventListener('DOMContentLoaded', function() {
     const statusElement = document.getElementById('status');
-    const urlInput = document.getElementById('apiUrl');
-    const modelSelect = document.getElementById('modelSelect');
-    const testButton = document.getElementById('testConnection');
-    const saveButton = document.getElementById('saveSettings');
+    const searchQuery = document.getElementById('searchQuery');
+    const searchButton = document.getElementById('searchButton');
+    const hiddenZero = document.getElementById('hiddenZero');
+    const searchResults = document.getElementById('searchResults');
+    const resultsList = document.getElementById('resultsList');
     
-    // Available models (based on your provided data)
-    const availableModels = [
-        { id: 'openai/gpt-oss-20b', name: 'GPT OSS 20B' },
-        { id: 'text-embedding-nomic-embed-text-v1.5', name: 'Nomic Embed Text v1.5' }
-    ];
+    // Triple-click counter for hidden settings access
+    let clickCount = 0;
+    let clickTimer = null;
     
-    // Load saved settings
-    loadSettings();
-    
-    // Populate model dropdown
-    populateModelSelect();
-    
-    // Test connection on load
-    testConnection();
+    // Check if we're on a PDF page
+    checkPDFPage();
     
     // Event listeners
-    testButton.addEventListener('click', testConnection);
-    saveButton.addEventListener('click', saveSettings);
+    searchButton.addEventListener('click', performSearch);
+    hiddenZero.addEventListener('click', handleHiddenClick);
+    searchQuery.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
     
-    function populateModelSelect() {
-        modelSelect.innerHTML = '';
-        availableModels.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.id;
-            option.textContent = model.name;
-            modelSelect.appendChild(option);
-        });
-    }
-    
-    function loadSettings() {
-        chrome.storage.sync.get(['apiUrl', 'selectedModel'], function(result) {
-            if (result.apiUrl) {
-                urlInput.value = result.apiUrl;
-            }
-            if (result.selectedModel) {
-                modelSelect.value = result.selectedModel;
-            }
-        });
-    }
-    
-    function saveSettings() {
-        const url = urlInput.value.trim();
-        const selectedModel = modelSelect.value;
+    // Handle hidden button clicks for settings access
+    function handleHiddenClick() {
+        clickCount++;
         
-        if (!url) {
-            showStatus('Please enter a valid URL', 'disconnected');
+        // Clear previous timer
+        if (clickTimer) {
+            clearTimeout(clickTimer);
+        }
+        
+        // Set timer to reset click count after 2 seconds
+        clickTimer = setTimeout(() => {
+            clickCount = 0;
+        }, 2000);
+        
+        // Open settings if clicked 3 times
+        if (clickCount >= 3) {
+            clickCount = 0;
+            if (clickTimer) {
+                clearTimeout(clickTimer);
+            }
+            openSettings();
+        }
+    }
+    
+    // Check if current page is a PDF
+    function checkPDFPage() {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            const currentTab = tabs[0];
+            const url = currentTab.url;
+            
+            if (url.includes('.pdf') || url.includes('application/pdf')) {
+                showStatus('PDF document detected', 'connected');
+                searchQuery.disabled = false;
+                searchButton.disabled = false;
+            } else {
+                showStatus('Navigate to a PDF document to search', 'disconnected');
+                searchQuery.disabled = true;
+                searchButton.disabled = true;
+            }
+        });
+    }
+    
+    // Perform search in the PDF
+    async function performSearch() {
+        const query = searchQuery.value.trim();
+        if (!query) {
+            showStatus('Please enter a search term', 'disconnected');
             return;
         }
         
-        chrome.storage.sync.set({
-            apiUrl: url,
-            selectedModel: selectedModel
-        }, function() {
-            showStatus('Settings saved!', 'connected');
-            setTimeout(() => {
-                testConnection();
-            }, 1000);
-        });
-    }
-    
-    async function testConnection() {
-        const url = urlInput.value.trim() || 'http://localhost:1234';
-        showStatus('Testing connection...', 'disconnected');
+        showStatus('Searching document...', 'connected');
         
         try {
-            // Test the models endpoint
-            console.log('PDF testing', `${url}/v1/models`);
-            const response = await fetch(`${url}/v1/models`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    // No authorization header as requested
-                }
+            // Get current settings
+            const settings = await new Promise(resolve => {
+                chrome.storage.sync.get(['apiUrl', 'selectedModel'], resolve);
             });
             
-            console.log('Models response status:', response.status);
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log('PDF Data:', data);
-                if (data.data && data.data.length > 0) {
-                    showStatus(`PDF Reader Found`, 'connected');
-                    updateAvailableModels(data.data);
-                    
-                    // Test chat completions with a simple message
-                    await testChatCompletion(url, data.data[0].id);
-                } else {
-                    showStatus('PDF reader Working', 'connected');
-                }
-            } else {
-                const errorText = await response.text();
-                console.error('Models endpoint error:', errorText);
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            if (!settings.apiUrl || !settings.selectedModel) {
+                showStatus('Please configure settings first', 'disconnected');
+                return;
             }
-        } catch (error) {
-            console.error('Connection test failed:', error);
-            showStatus(`❌ Connection failed: ${error.message}`, 'disconnected');
-        }
-    }
-    
-    async function testChatCompletion(url, modelId) {
-        try {
-            console.log('Testing chat completions endpoint...');
-            const testPayload = {
-                model: modelId,
-                messages: [
-                    {
-                        role: "user",
-                        content: "Hello, this is a test. Please respond with 'Test successful'."
+            
+            // Send search request to content script
+            chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                chrome.tabs.sendMessage(tabs[0].id, {
+                    action: 'searchPDF',
+                    query: query,
+                    settings: settings
+                }, function(response) {
+                    if (chrome.runtime.lastError) {
+                        showStatus('Failed to search document', 'disconnected');
+                        return;
                     }
-                ],
-                temperature: 0.7,
-                max_tokens: 50
-            };
-            
-            console.log('Chat payload:', JSON.stringify(testPayload, null, 2));
-            
-            const response = await fetch(`${url}/v1/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
-                body: JSON.stringify(testPayload)
+                    
+                    if (response && response.success) {
+                        displaySearchResults(response.results);
+                        showStatus(`Found ${response.results.length} result(s)`, 'connected');
+                    } else {
+                        showStatus('No results found', 'disconnected');
+                        hideSearchResults();
+                    }
+                });
             });
             
-            console.log('Chat response status:', response.status);
-            
-            if (response.ok) {
-                const data = await response.json();
-                console.log('Chat response:', data);
-                showStatus(`✅ Full API test successful!`, 'connected');
-            } else {
-                const errorText = await response.text();
-                console.error('Chat completions error:', errorText);
-                showStatus(`⚠️ Models OK, but chat failed: ${response.status}`, 'disconnected');
-            }
         } catch (error) {
-            console.error('Chat completion test failed:', error);
-            showStatus(`⚠️ Models OK, but chat failed: ${error.message}`, 'disconnected');
+            console.error('Search failed:', error);
+            showStatus('Search failed', 'disconnected');
         }
     }
     
-    function updateAvailableModels(serverModels) {
-        // Update dropdown with models from server if available
-        const currentValue = modelSelect.value;
-        modelSelect.innerHTML = '';
+    // Open settings page
+    function openSettings() {
+        chrome.tabs.create({
+            url: chrome.runtime.getURL('settings.html')
+        });
+    }
+    
+    // Display search results
+    function displaySearchResults(results) {
+        resultsList.innerHTML = '';
         
-        serverModels.forEach(model => {
-            const option = document.createElement('option');
-            option.value = model.id;
-            option.textContent = model.id;
-            modelSelect.appendChild(option);
+        if (results.length === 0) {
+            hideSearchResults();
+            return;
+        }
+        
+        results.forEach((result, index) => {
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item';
+            resultItem.textContent = `${index + 1}. ${result.text.substring(0, 100)}...`;
+            resultItem.addEventListener('click', () => {
+                // Send message to content script to highlight result
+                chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        action: 'highlightResult',
+                        index: index
+                    });
+                });
+            });
+            resultsList.appendChild(resultItem);
         });
         
-        // Try to restore previous selection
-        if (currentValue && [...modelSelect.options].some(opt => opt.value === currentValue)) {
-            modelSelect.value = currentValue;
-        }
+        searchResults.style.display = 'block';
     }
     
+    // Hide search results
+    function hideSearchResults() {
+        searchResults.style.display = 'none';
+        resultsList.innerHTML = '';
+    }
+    
+    // Show status message
     function showStatus(message, type) {
         statusElement.textContent = message;
         statusElement.className = `status ${type}`;
